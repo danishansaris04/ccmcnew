@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="hi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>D-FLIX | DATABASE ERROR</title>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background: #050505;
+            color: #ff3333;
+            font-family: 'Courier New', monospace;
+            touch-action: none;
+        }
+
+        #hacker-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            z-index: 1;
+            opacity: 0.3;
+        }
+
+        #hacker-ui {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            text-align: center;
+            display: none;
+            width: 90%;
+            max-width: 500px;
+            background: rgba(10, 0, 0, 0.85);
+            border: 1px solid #ff0000;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.2);
+        }
+
+        .glitch {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff0000;
+            text-shadow: 2px 2px #550000;
+            animation: shake 0.2s infinite;
+        }
+
+        @keyframes shake {
+            0% {
+                transform: translate(1px, 1px);
+            }
+
+            50% {
+                transform: translate(-1px, -1px);
+            }
+
+            100% {
+                transform: translate(1px, -1px);
+            }
+        }
+
+        #log-container {
+            text-align: left;
+            font-size: 11px;
+            color: #00FF00;
+            background: #000;
+            padding: 10px;
+            margin: 15px 0;
+            height: 120px;
+            overflow: hidden;
+            border: 1px solid #333;
+        }
+
+        .loading-bar {
+            width: 100%;
+            height: 4px;
+            background: #222;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .loading-progress {
+            width: 40%;
+            height: 100%;
+            background: #ff0000;
+            animation: load 1.5s infinite linear;
+        }
+
+        @keyframes load {
+            from {
+                transform: translateX(-100%);
+            }
+
+            to {
+                transform: translateX(250%);
+            }
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+            position: relative;
+            z-index: 10;
+        }
+
+        .error-code {
+            color: #fff;
+            background: #ff0000;
+            padding: 2px 5px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="hacker-canvas"></canvas>
+
+    <div id="hacker-ui">
+        <div class="glitch">CRITICAL DATABASE ERROR</div>
+        <p style="color: #ccc; font-size: 13px;">Status: <span class="error-code">CONNECTION_FAILED</span></p>
+
+        <div id="log-container"></div>
+
+        <div class="loading-bar">
+            <div class="loading-progress"></div>
+        </div>
+        <p style="color: #ff3333; font-size: 15px; letter-spacing: 1px; margin: 0;">RETRYING SQL HANDSHAKE...</p>
+    </div>
+
+    <iframe id="content-frame" src=""></iframe>
+
+    <script>
+        // Firebase Configuration
+        const flixConfig = {
+  apiKey: "AIzaSyDUgUTVv07lz6AmFUe-oPvSRN7AxrZOcY0",
+  authDomain: "ccmcserver-4d9b7.firebaseapp.com",
+  databaseURL: "https://ccmcserver-4d9b7-default-rtdb.firebaseio.com",
+  projectId: "ccmcserver-4d9b7",
+  storageBucket: "ccmcserver-4d9b7.firebasestorage.app",
+  messagingSenderId: "299281705229",
+  appId: "1:299281705229:web:ac5b9975b42ef749fde844",
+  measurementId: "G-M33248LNVS"
+};
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const canvas = document.getElementById('hacker-canvas');
+        const ctx = canvas.getContext('2d');
+        const iframe = document.getElementById('content-frame');
+        const hackerUI = document.getElementById('hacker-ui');
+        const logContainer = document.getElementById('log-container');
+
+        // Matrix Rain (Dark Red)
+        let drops = [];
+        const fontSize = 16;
+
+        function initMatrix() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const columns = canvas.width / fontSize;
+            for (let i = 0; i < columns; i++) drops[i] = 1;
+        }
+
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#440000"; // Dull red matrix
+            ctx.font = fontSize + "px monospace";
+            for (let i = 0; i < drops.length; i++) {
+                const text = String.fromCharCode(Math.random() * 128);
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 50);
+        initMatrix();
+        window.onresize = initMatrix;
+
+        // Realistic Error Logs
+        const logMessages = [
+            "> SQLSTATE[HY000] [2002] Connection refused",
+            "> Attempting reconnect to cluster node 1...",
+            "> ERROR: Database query timeout at 0x00451",
+            "> Fatal error: Uncaught PDOException in /db/config.php",
+            "> Warning: Packet sequence error from remote host",
+            "> Failed to sync metadata with master branch",
+            "> Access denied for user 'admin'@'192.168.199.102'",
+            "> Re-routing traffic to fallback nodes... FAILED",
+            "> Initializing secure socket layer...",
+            "> Establishing encrypted tunnel...",
+            "> ERROR: Handshake with remote server failed",
+            "> Attempting reconnect to backup gateway...",
+            "> WARNING: Unauthorized login attempt detected",
+            "> Loading system configuration...",
+            "> ERROR: Unable to locate environment variables",
+            "> Syncing cache with remote datastore...",
+            "> WARNING: High latency detected in network layer",
+            "> Attempting packet retransmission...",
+            "> ERROR: Data stream interrupted",
+            "> Retrying database query...",
+            "> WARNING: Query execution exceeded time limit",
+            "> ERROR: Unable to resolve DNS for db-master.local",
+            "> Attempting fallback DNS resolver...",
+            "> ERROR: Connection dropped by remote host",
+            "> Restarting database service...",
+            "> Loading backup configuration...",
+            "> ERROR: Missing dependency in /lib/modules",
+            "> Attempting auto-repair sequence...",
+            "> WARNING: Disk read speed below threshold",
+            "> Rebuilding corrupted index tables...",
+            "> ERROR: Failed to mount storage volume",
+            "> Attempting emergency recovery...",
+            "> WARNING: System integrity check failed",
+            "> ERROR: Secure token validation failed",
+            "> Attempting token regeneration...",
+            "> WARNING: Session expired due to inactivity",
+            "> Re-authenticating user credentials...",
+            "> ERROR: Access token invalid or revoked",
+            "> Retrying authentication request...",
+            "> WARNING: Firewall blocked outgoing request",
+            "> ERROR: API gateway returned status 503",
+            "> Attempting failover routing...",
+            "> WARNING: Cluster node heartbeat lost",
+            "> ERROR: Unable to sync with master node",
+            "> Attempting distributed recovery...",
+            "> WARNING: Cache memory overflow detected",
+            "> Flushing temporary buffers...",
+            "> ERROR: Critical exception at memory address 0x00A21",
+            "> System entering safe mode...",
+            "> Generating crash report...",
+            "> Saving logs to /var/log/system.log"
+        ];
+
+        function updateLogs() {
+            const line = document.createElement('div');
+            line.style.marginBottom = "5px";
+            line.innerText = logMessages[Math.floor(Math.random() * logMessages.length)];
+            logContainer.prepend(line);
+            if (logContainer.childNodes.length > 7) logContainer.removeChild(logContainer.lastChild);
+        }
+        setInterval(updateLogs, 1200);
+
+        // Firebase Control Logic
+        db.ref('server_settings').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            if (data.isDown) {
+                canvas.style.display = 'block';
+                hackerUI.style.display = 'block';
+                iframe.style.display = 'none';
+                iframe.src = "";
+            } else {
+                canvas.style.display = 'none';
+                hackerUI.style.display = 'none';
+                iframe.style.display = 'block';
+                const target = (data.active_site === '2') ? data.site2 : data.site1;
+                if (iframe.src !== target) iframe.src = target;
+            }
+        });
+
+        // Anti-Zoom
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) e.preventDefault();
+        }, {
+            passive: false
+        });
+    </script>
+</body>
+
+</html>
