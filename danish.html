@@ -589,14 +589,13 @@ function resetGateGateElement() {
 }
 
 // ═══════════════════════════════
-// 🆕 POPUP SIGN-IN ENGINE (FIXED FOR GITHUB PAGES & MOBILE IN-APP BROWSERS)
+// 🆕 POPUP SIGN-IN ENGINE
 // ═══════════════════════════════
 function signInWithGoogle() {
     blockGateGateElement("Opening Google Secure Sign-In...");
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     
-    // Using Popup Authentication instead of Redirect to prevent URL context loss on mobile
     auth.signInWithPopup(provider).then((result) => {
         if (result && result.user && result.user.displayName) {
             console.log("Popup Login Successful:", result.user.displayName);
@@ -624,7 +623,6 @@ window.onload = () => {
     }
     blockGateGateElement("Checking secure session tokens...");
 
-    // Global session observer
     auth.onAuthStateChanged(user => {
         if (user && user.displayName) {
             console.log("Session Verified:", user.displayName);
@@ -651,7 +649,6 @@ function processAccessFlow(fullName) {
     db.ref('user_access/' + key).once('value').then(snap => {
         const data = snap.val();
 
-        // New Profile Creation Logic
         if (!data) {
             db.ref('user_access/' + key).set({
                 name: fullName,
@@ -673,7 +670,6 @@ function processAccessFlow(fullName) {
         userAccessId = data.accessId || 'GOOGLE_VERIFIED';
         localStorage.setItem('ccmc_access_id', userAccessId);
 
-        // Routing engine handlers
         hideLoader(() => {
             if (data.status === 'approved' || data.status === 'frozen') {
                 document.getElementById('accessGate').style.display = 'none';
@@ -866,38 +862,46 @@ function showNotification() {
 }
 
 // ═══════════════════════════════
-// MODULE INTERFACE LOADING
+// MODULE INTERFACE LOADING (UPDATED WITH LIVE HIDE CHECK)
 // ═══════════════════════════════
 function loadChapters() {
     const key = nameToKey(userName);
-    const settings = APP_DATA.chapter_settings || {};
     const quiz = APP_DATA.quiz || {};
 
-    db.ref('user_access/' + key + '/allowedChapters').on('value', allowSnap => {
-        const allowed = allowSnap.val();
-        const cont = document.getElementById('chapterList');
-        cont.innerHTML = ""; let count = 0;
+    // Listen live to chapter settings from Firebase Database
+    db.ref('chapter_settings').on('value', settingsSnap => {
+        const settings = settingsSnap.val() || (APP_DATA.chapter_settings || {});
 
-        Object.keys(quiz).forEach(chKey => {
-            const chData = settings[chKey] || {};
-            if (chData.hidden) return;
-            if (allowed !== null && !allowed[chKey]) return;
+        db.ref('user_access/' + key + '/allowedChapters').on('value', allowSnap => {
+            const allowed = allowSnap.val();
+            const cont = document.getElementById('chapterList');
+            cont.innerHTML = ""; let count = 0;
 
-            const qVal = quiz[chKey];
-            let qCount = Array.isArray(qVal) ? qVal.filter(q => q && q.q).length : Object.values(qVal || {}).filter(q => q && q.q).length;
-            if (qCount === 0) return;
+            Object.keys(quiz).forEach(chKey => {
+                const chData = settings[chKey] || {};
+                
+                // Hide check from Admin
+                if (chData.hidden === true) return;
+                
+                // Student specific access check
+                if (allowed !== null && !allowed[chKey]) return;
 
-            count++;
-            cont.innerHTML +=
-                '<div class="card" onclick="startQuiz(\'' + chKey + '\')" style="animation-delay:' + count * 0.06 + 's">' +
-                '<div style="display:flex;align-items:center;">' +
-                '<img src="' + (chData.image || 'https://i.postimg.cc/XvxfNJPG/CC-20240615-132415-(1).png') + '" class="module-img" onerror="this.src=\'https://i.postimg.cc/XvxfNJPG/CC-20240615-132415-(1).png\'">' +
-                '<div><div class="ch-name">' + chKey + '</div>' +
-                '<div class="ch-meta"><i class="fa-regular fa-clock"></i>' + (chData.timer || 0) + ' MIN &nbsp;&nbsp;<i class="fa-solid fa-list-check"></i>' + qCount + ' QNS</div>' +
-                '</div></div>' +
-                '<div class="ch-play"><i class="fa-solid fa-play" style="font-size:12px;"></i></div></div>';
+                const qVal = quiz[chKey];
+                let qCount = Array.isArray(qVal) ? qVal.filter(q => q && q.q).length : Object.values(qVal || {}).filter(q => q && q.q).length;
+                if (qCount === 0) return;
+
+                count++;
+                cont.innerHTML +=
+                    '<div class="card" onclick="startQuiz(\'' + chKey + '\')" style="animation-delay:' + count * 0.06 + 's">' +
+                    '<div style="display:flex;align-items:center;">' +
+                    '<img src="' + (chData.image || 'https://i.postimg.cc/XvxfNJPG/CC-20240615-132415-(1).png') + '" class="module-img" onerror="this.src=\'https://i.postimg.cc/XvxfNJPG/CC-20240615-132415-(1).png\'">' +
+                    '<div><div class="ch-name">' + chKey + '</div>' +
+                    '<div class="ch-meta"><i class="fa-regular fa-clock"></i>' + (chData.timer || 0) + ' MIN &nbsp;&nbsp;<i class="fa-solid fa-list-check"></i>' + qCount + ' QNS</div>' +
+                    '</div></div>' +
+                    '<div class="ch-play"><i class="fa-solid fa-play" style="font-size:12px;"></i></div></div>';
+            });
+            document.getElementById('statChaps').innerText = count;
         });
-        document.getElementById('statChaps').innerText = count;
     });
 }
 
