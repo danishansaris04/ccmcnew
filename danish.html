@@ -589,22 +589,30 @@ function resetGateGateElement() {
 }
 
 // ═══════════════════════════════
-// 🆕 REDIRECT SIGN-IN ENGINE
+// 🆕 POPUP SIGN-IN ENGINE (FIXED FOR GITHUB PAGES & MOBILE IN-APP BROWSERS)
 // ═══════════════════════════════
 function signInWithGoogle() {
     blockGateGateElement("Opening Google Secure Sign-In...");
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     
-    auth.signInWithRedirect(provider).catch((error) => {
-        console.error("Redirect Auth Error: ", error);
+    // Using Popup Authentication instead of Redirect to prevent URL context loss on mobile
+    auth.signInWithPopup(provider).then((result) => {
+        if (result && result.user && result.user.displayName) {
+            console.log("Popup Login Successful:", result.user.displayName);
+            processAccessFlow(result.user.displayName);
+        } else {
+            resetGateGateElement();
+        }
+    }).catch((error) => {
+        console.error("Popup Auth Error: ", error);
         alert("Google Sign-In Failed: " + error.message);
         resetGateGateElement();
     });
 }
 
 // ═══════════════════════════════
-// 🆕 STEP 2: SECURE LIFECYCLE INITIALIZATION + REDIRECT RESULT HANDLER (SAFE TIMEOUT FIX)
+// 🆕 STEP 2: SECURE LIFECYCLE INITIALIZATION
 // ═══════════════════════════════
 window.onload = () => {
     if (typeof APP_DATA === 'undefined') {
@@ -616,34 +624,13 @@ window.onload = () => {
     }
     blockGateGateElement("Checking secure session tokens...");
 
-    let isFlowProcessed = false;
-
-    // 1. Auth state observer for session cache
+    // Global session observer
     auth.onAuthStateChanged(user => {
-        if (user && user.displayName && !isFlowProcessed) {
-            isFlowProcessed = true;
-            console.log("Cached Session Found:", user.displayName);
+        if (user && user.displayName) {
+            console.log("Session Verified:", user.displayName);
             processAccessFlow(user.displayName);
-        }
-    });
-
-    // 2. Safely check redirect result without throwing unhandled timeout block
-    auth.getRedirectResult().then((result) => {
-        if (!isFlowProcessed && result && result.user && result.user.displayName) {
-            isFlowProcessed = true;
-            console.log("Redirect Login Successful:", result.user.displayName);
-            processAccessFlow(result.user.displayName);
-        } else if (!isFlowProcessed && !auth.currentUser) {
-            console.log("No redirect result found. Displaying login panel.");
-            hideLoader(() => {
-                document.getElementById('accessGate').style.display = 'flex';
-                showGateScreen('loginScreen');
-                resetGateGateElement();
-            });
-        }
-    }).catch((error) => {
-        console.warn("Handled Redirect Result Error/Timeout:", error);
-        if (!isFlowProcessed && !auth.currentUser) {
+        } else {
+            console.log("No active session found. Displaying login panel.");
             hideLoader(() => {
                 document.getElementById('accessGate').style.display = 'flex';
                 showGateScreen('loginScreen');
